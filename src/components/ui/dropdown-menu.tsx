@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, createContext, useContext } from 'react'
 import { ChevronDown } from 'lucide-react'
 
 interface DropdownMenuProps {
@@ -13,9 +13,13 @@ interface DropdownMenuItemProps {
   className?: string
 }
 
+const DropdownContext = createContext<{ closeDropdown: () => void } | null>(null)
+
 export function DropdownMenu({ trigger, children, align = 'left' }: DropdownMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+
+  const closeDropdown = () => setIsOpen(false)
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -40,20 +44,29 @@ export function DropdownMenu({ trigger, children, align = 'left' }: DropdownMenu
       </div>
       
       {isOpen && (
-        <div className={`absolute top-full mt-1 z-50 min-w-[200px] bg-popover border border-border rounded-lg shadow-lg py-1 ${
-          align === 'right' ? 'right-0' : 'left-0'
-        }`}>
-          {children}
-        </div>
+        <DropdownContext.Provider value={{ closeDropdown }}>
+          <div className={`absolute top-full mt-1 z-50 min-w-[200px] bg-popover border border-border rounded-lg shadow-lg py-1 ${
+            align === 'right' ? 'right-0' : 'left-0'
+          }`}>
+            {children}
+          </div>
+        </DropdownContext.Provider>
       )}
     </div>
   )
 }
 
 export function DropdownMenuItem({ children, onClick, className = '' }: DropdownMenuItemProps) {
+  const context = useContext(DropdownContext)
+
+  const handleClick = () => {
+    onClick?.()
+    context?.closeDropdown()
+  }
+
   return (
     <div
-      onClick={onClick}
+      onClick={handleClick}
       className={`px-3 py-2 text-sm cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors ${className}`}
     >
       {children}

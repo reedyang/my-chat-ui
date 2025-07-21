@@ -116,7 +116,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[600px] h-[600px] max-w-none max-h-none flex flex-col">
+      <DialogContent className="w-[600px] h-[600px] min-w-[600px] max-w-[600px] max-h-none flex flex-col flex-shrink-0">
         <DialogHeader>
           <DialogTitle>设置</DialogTitle>
           <DialogClose onClick={() => onOpenChange(false)} />

@@ -22,40 +22,49 @@ export function MessageItem({ message, isStreaming }: MessageItemProps) {
     }
   }
 
-  const parseMessageContent = (content: string) => {
-    // Regex to match thinking sections (various formats)
-    const thinkingPatterns = [
-      /<thinking[^>]*>([\s\S]*?)(<\/antml:thinking>|$)/gi,
-      /<thinking[^>]*>([\s\S]*?)(<\/thinking>|$)/gi,
-      /\[思考开始\]([\s\S]*?)(\[思考结束\]|$)/gi,
-      /\[思考\]([\s\S]*?)(\[\/思考\]|$)/gi
-    ]
-    
+    const parseMessageContent = (content: string) => {
     let thinkingContent = ''
     let normalContent = content
     let thinkingComplete = false
     
-    // Try each pattern
-    for (const pattern of thinkingPatterns) {
-      const matches = content.match(pattern)
-      if (matches) {
-        const match = matches[0]
-                 thinkingComplete = match.includes('</thinking>') || 
-                           match.includes('</thinking>') ||
-                           match.includes('[思考结束]') ||
-                           match.includes('[/思考]')
-        
-        // Extract content between tags
-        const contentMatch = match.match(pattern)
-        if (contentMatch && contentMatch[1]) {
-          thinkingContent = contentMatch[1].trim()
-        }
-        
-        // Remove thinking tags from normal content
-        normalContent = content.replace(pattern, '').trim()
-        break
-      }
-    }
+    // Check for various thinking tag formats
+    const patterns = [
+      { regex: /<think[^>]*>([\s\S]*?)(<\/think>|$)/gi, endTag: '</think>' },
+      { regex: /<thinking[^>]*>([\s\S]*?)(<\/antml:thinking>|$)/gi, endTag: '</thinking>' },
+      { regex: /<thinking[^>]*>([\s\S]*?)(<\/thinking>|$)/gi, endTag: '</thinking>' }
+    ]
+    
+         for (const pattern of patterns) {
+       const regex = new RegExp(pattern.regex.source, pattern.regex.flags)
+       const match = regex.exec(content)
+       if (match) {
+         thinkingComplete = match[0].includes(pattern.endTag)
+         thinkingContent = match[1] ? match[1].trim() : ''
+         
+         // Remove thinking section from normal content
+         normalContent = content.replace(regex, '').trim()
+         break
+       }
+     }
+    
+         // If no thinking tags found, but content starts with thinking-like patterns
+     if (!thinkingContent) {
+       // Check for incomplete thinking tags at the start
+       const incompletePatterns = [
+         /^<think[^>]*>([\s\S]*)$/i,
+         /^<thinking[^>]*>([\s\S]*)$/i
+       ]
+       
+       for (const pattern of incompletePatterns) {
+         const incompleteMatch = content.match(pattern)
+         if (incompleteMatch) {
+           thinkingContent = incompleteMatch[1].trim()
+           thinkingComplete = false
+           normalContent = ''
+           break
+         }
+       }
+     }
     
     return {
       thinkingContent,
@@ -82,11 +91,11 @@ export function MessageItem({ message, isStreaming }: MessageItemProps) {
           className={`px-4 py-3 rounded-lg ${
             isUser
               ? 'bg-primary text-primary-foreground ml-auto'
-              : 'bg-muted text-foreground'
+              : 'text-foreground'
           }`}
         >
           {isAssistant ? (
-            <div className="prose prose-sm max-w-none">
+            <>
               {(() => {
                 const { thinkingContent, normalContent, thinkingComplete } = parseMessageContent(message.content)
                 
@@ -99,15 +108,19 @@ export function MessageItem({ message, isStreaming }: MessageItemProps) {
                       />
                     )}
                     {normalContent && normalContent.trim() && (
-                      <ReactMarkdown>{normalContent}</ReactMarkdown>
+                      <div className="prose prose-sm max-w-none">
+                        <ReactMarkdown>{normalContent}</ReactMarkdown>
+                      </div>
                     )}
                     {!normalContent && !thinkingContent && message.content && (
-                      <ReactMarkdown>{message.content}</ReactMarkdown>
+                      <div className="prose prose-sm max-w-none">
+                        <ReactMarkdown>{message.content}</ReactMarkdown>
+                      </div>
                     )}
                   </>
                 )
               })()}
-            </div>
+            </>
           ) : (
             <p className="whitespace-pre-wrap">{message.content}</p>
           )}

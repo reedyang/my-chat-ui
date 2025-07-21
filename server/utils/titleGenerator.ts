@@ -3,9 +3,6 @@
  */
 export async function generateTitleWithAI(content: string, model: string, ollamaService: any): Promise<string> {
   try {
-    console.log(`Attempting to generate title with AI model: ${model}`)
-    console.log(`User content: ${content.substring(0, 100)}...`)
-    
     const prompt = `Generate a concise title (10-30 characters) for this conversation based on the user's message:
 
 User message: ${content}
