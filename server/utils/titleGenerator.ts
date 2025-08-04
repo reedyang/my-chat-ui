@@ -3,9 +3,27 @@
  */
 export async function generateTitleWithAI(content: string, model: string, ollamaService: any): Promise<string> {
   try {
+    // Clean the content by removing <think></think> tags and their content
+    let cleanedContent = content
+    
+    // Remove <think></think> tags and their content
+    cleanedContent = cleanedContent.replace(/<think[^>]*>[\s\S]*?<\/think>/gi, '')
+    
+    // Remove incomplete <think> tags at the end
+    cleanedContent = cleanedContent.replace(/<think[^>]*>[\s\S]*$/gi, '')
+    
+    // Clean up extra whitespace
+    cleanedContent = cleanedContent.trim()
+    
+    // If content is empty after cleaning, use fallback
+    if (!cleanedContent) {
+      console.log('Content empty after removing think tags, using fallback')
+      return generateTitleFromMessage(content)
+    }
+    
     const prompt = `Generate a concise title (10-30 characters) for this conversation based on the user's message:
 
-User message: ${content}
+User message: ${cleanedContent}
 
 Requirements:
 - Keep it short and descriptive
@@ -27,6 +45,12 @@ Title:`
     // Extract and clean the generated title
     let title = response.trim()
     
+    // Remove <think></think> tags and their content from AI response
+    title = title.replace(/<think[^>]*>[\s\S]*?<\/think>/gi, '')
+    
+    // Remove incomplete <think> tags at the end
+    title = title.replace(/<think[^>]*>[\s\S]*$/gi, '')
+    
     // Remove common prefixes
     title = title.replace(/^(标题：|Title:\s*|答：|回答：)/i, '').trim()
     
@@ -35,6 +59,12 @@ Title:`
     
     // Remove newlines
     title = title.split('\n')[0].trim()
+    
+    // If title is empty after removing think tags, use fallback
+    if (!title || title.trim() === '') {
+      console.log('AI title empty after removing think tags, using fallback')
+      return generateTitleFromMessage(content)
+    }
     
     // Limit length
     if (title.length > 30) {
@@ -72,8 +102,17 @@ Title:`
  * Simple fallback title generation from the first user message
  */
 export function generateTitleFromMessage(content: string): string {
-  // Clean the content
-  const cleaned = content.trim()
+  // Clean the content by removing <think></think> tags and their content
+  let cleaned = content
+  
+  // Remove <think></think> tags and their content
+  cleaned = cleaned.replace(/<think[^>]*>[\s\S]*?<\/think>/gi, '')
+  
+  // Remove incomplete <think> tags at the end
+  cleaned = cleaned.replace(/<think[^>]*>[\s\S]*$/gi, '')
+  
+  // Clean up extra whitespace
+  cleaned = cleaned.trim()
   
   if (!cleaned) {
     return '新对话'
@@ -90,7 +129,6 @@ export function generateTitleFromMessage(content: string): string {
   const actionPatterns = [
     /^(请|帮我|帮忙|能否|可以|如何|怎么|怎样)(.*)/,
     /^(写|创建|生成|制作|设计|开发)(.*)/,
-    /^(解释|说明|介绍|告诉我)(.*)/,
     /^(翻译|转换|转化)(.*)/,
   ]
   
@@ -99,6 +137,12 @@ export function generateTitleFromMessage(content: string): string {
     if (match && match[2]) {
       const extracted = match[2].trim()
       if (extracted.length > 0) {
+        // 如果提取的内容太短（少于3个字符），可能不是完整的短语
+        // 在这种情况下，使用原始内容
+        if (extracted.length < 3) {
+          const title = cleaned.length <= 30 ? cleaned : cleaned.substring(0, 27) + '...'
+          return title
+        }
         const title = extracted.length <= 25 ? extracted : extracted.substring(0, 22) + '...'
         return title
       }
